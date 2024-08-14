@@ -1,0 +1,50 @@
+stages:
+  preprocess_data:
+    cmd: python src/preprocess.py
+    deps:
+    - data/raw_data
+    - src/preprocess.py
+
+  linear_regression:
+    cmd: python src/model.py --linear --output ${linear_model.name}
+    deps:
+    - data/output/
+    - src/model.py
+    outs:
+    - data/model_output/${linear_model.name}.json
+    - data/model_output/${linear_model.name}.pkl
+    params:
+    - linear_model
+
+  ridge_regression:
+    cmd: python src/model.py --ridge --output ${ridge_model.name} --ridge-alpha ${ridge_model.alpha} --ridge-solver ${ridge_model.solver}
+    deps:
+    - data/output/
+    - src/model.py
+    outs:
+    - data/model_output/${ridge_model.name}.json
+    - data/model_output/${ridge_model.name}.pkl
+    params:
+    - ridge_model
+
+  lasso_regression:
+    cmd: python src/model.py --lasso --output ${lasso_model.name} --lasso-alpha ${lasso_model.alpha}
+    deps:
+    - data/output/
+    - src/model.py
+    outs:
+    - data/model_output/${lasso_model.name}.json
+    - data/model_output/${lasso_model.name}.pkl
+    params:
+    - lasso_model
+
+  random_forest:
+    cmd: python src/model.py --random-forest --output ${random_forest_model.name} --rf-estimators ${random_forest_model.n_estimators} --rf-max-depth ${random_forest_model.max_depth}
+    deps:
+    - data/output/
+    - src/model.py
+    outs:
+    - data/model_output/${random_forest_model.name}.json
+    - data/model_output/${random_forest_model.name}.pkl
+    params:
+    - random_forest_model

@@ -5,7 +5,7 @@ import pandas as pd
 def load_model():
     # Define the path to the saved model
     current_directory = os.path.dirname(__file__)
-    model_path = os.path.join(current_directory, '../data/model_output/model.pkl')
+    model_path = os.path.join(current_directory, '../data/model_output/RandomForest.pkl')
     
     # Load the model
     model = joblib.load(model_path)

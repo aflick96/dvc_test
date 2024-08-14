@@ -62,7 +62,7 @@ def parse_model_configs(args):
     model_configs = {}
 
     if args.linear:
-        model_configs['LinearRegression'] = (LinearRegression(), {})
+        model_configs['Linear'] = (LinearRegression(), {})
 
     if args.ridge:
         model_configs['Ridge'] = (Ridge(), {'regressor__alpha': args.ridge_alpha, 'regressor__solver': args.ridge_solver})
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--linear', action='store_true')
     parser.add_argument('--ridge', action='store_true')
     parser.add_argument('--lasso', action='store_true')
-    parser.add_argument('--random_forest', action='store_true')
+    parser.add_argument('--random-forest', action='store_true')
 
     parser.add_argument('--ridge-alpha', nargs='+', type=float, default=[0.1, 1.0, 10.0, 100.0])
     parser.add_argument('--ridge-solver', nargs='+', default=['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga'])
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     parser.add_argument('--rf-estimators', nargs='+', type=int, default=[10, 50, 100])
     parser.add_argument('--rf-max-depth', nargs='+', type=int, default=[None, 10, 20, 30])
 
-    parser.add_argument('--output', type=str, required=True)
+    parser.add_argument('--output_params', type=str, required=True)
 
     args = parser.parse_args()
 
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     results = compare_models(x, y, preprocessor, model_configs)
 
     parameters_to_save = {name: results[name]['best_params'] for name in results}
-    save_model_parameters(parameters_to_save, args.output)
+    save_model_parameters(parameters_to_save, args.output_params)
 
     best_model_name = max(results, key=lambda x: results[x]['r2'])
     best_model = results[best_model_name]['best_model']
