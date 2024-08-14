@@ -1,7 +1,11 @@
 import pandas as pd
 import os
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
+import argparse
+import json
+
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import OneHotEncoder
@@ -29,38 +33,85 @@ def prepare_data(df):
         ])
     return x, y, preprocessor
 
-def build_and_evaluate_model(x, y, preprocessor):
-    # Split the data
-    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+def build_and_tune_model(x_train, y_train, preprocessor, model, parameter_grid):
+    model_pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('regressor', model)])
+    grid_search = GridSearchCV(model_pipeline, parameter_grid, cv=5, scoring='neg_mean_squared_error')
+    grid_search.fit(x_train, y_train)
+    best_model = grid_search.best_estimator_
+    return best_model, grid_search.best_params_
 
-    # Create a pipeline
-    model = Pipeline(steps=[('preprocessor', preprocessor),
-                            ('regressor', LinearRegression())])
+def compare_models(x, y, preprocessor, model_configs):
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+    model_results = {}
 
-    # Train the model
-    model.fit(X_train, y_train)
-
-    # Predict on the test set
-    y_pred = model.predict(X_test)
-
-    # Evaluate the model
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
+    for name, (model, parameter_grid) in model_configs.items():
+        best_model, best_params = build_and_tune_model(x_train, y_train, preprocessor, model, parameter_grid)
+        y_pred = best_model.predict(x_test)
+        mse = mean_squared_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        model_results[name] = {'best_model': best_model, 'best_params': best_params, 'mse': mse, 'r2': r2}
     
-    print(f"Mean Squared Error: {mse}")
-    print(f"R^2 Score: {r2}")
+    return model_results
 
-    return model
-    
-
-def export_model(model):
+def export_model(model, model_name):
     current_directory = os.path.dirname(__file__)
     output_directory = os.path.join(current_directory, '../data/model_output')
-    joblib.dump(model, os.path.join(output_directory, 'model.pkl'))
+    joblib.dump(model, os.path.join(output_directory, f'{model_name}.pkl'))
+
+def parse_model_configs(args):
+    model_configs = {}
+
+    if args.linear:
+        model_configs['LinearRegression'] = (LinearRegression(), {})
+
+    if args.ridge:
+        model_configs['Ridge'] = (Ridge(), {'regressor__alpha': args.ridge_alpha, 'regressor__solver': args.ridge_solver})
+
+    if args.lasso:
+        model_configs['Lasso'] = (Lasso(), {'regressor__alpha': args.lasso_alpha})
+
+    if args.random_forest:
+        model_configs['RandomForest'] = (RandomForestRegressor(), {'regressor__n_estimators': args.rf_estimators, 'regressor__max_depth': args.rf_max_depth})
+
+    return model_configs
+
+def save_model_parameters(parameters, output_name):
+    current_directory = os.path.dirname(__file__)
+    output_directory = os.path.join(current_directory, '../data/model_output')
+    with open(os.path.join(output_directory, f'{output_name}.json'), 'w') as f:
+        json.dump(parameters, f)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--linear', action='store_true')
+    parser.add_argument('--ridge', action='store_true')
+    parser.add_argument('--lasso', action='store_true')
+    parser.add_argument('--random_forest', action='store_true')
+
+    parser.add_argument('--ridge-alpha', nargs='+', type=float, default=[0.1, 1.0, 10.0, 100.0])
+    parser.add_argument('--ridge-solver', nargs='+', default=['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga'])
+
+    parser.add_argument('--lasso-alpha', nargs='+', type=float, default=[0.1, 1.0, 10.0])
+
+    parser.add_argument('--rf-estimators', nargs='+', type=int, default=[10, 50, 100])
+    parser.add_argument('--rf-max-depth', nargs='+', type=int, default=[None, 10, 20, 30])
+
+    parser.add_argument('--output', type=str, required=True)
+
+    args = parser.parse_args()
+
+    model_configs = parse_model_configs(args)
+
     data_set = read_data('combined.csv')
     x, y, preprocessor = prepare_data(data_set)
-    model = build_and_evaluate_model(x, y, preprocessor)
-    export_model(model)
+
+    results = compare_models(x, y, preprocessor, model_configs)
+
+    parameters_to_save = {name: results[name]['best_params'] for name in results}
+    save_model_parameters(parameters_to_save, args.output)
+
+    best_model_name = max(results, key=lambda x: results[x]['r2'])
+    best_model = results[best_model_name]['best_model']
+    export_model(best_model, best_model_name)
     
