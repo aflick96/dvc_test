@@ -1,0 +1,4 @@
+[core]
+    remote = dvc_test
+['remote "dvc_test"']
+    url = //FLICKAT1-WL1/dvc_test
