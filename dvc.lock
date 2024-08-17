@@ -1,0 +1,154 @@
+schema: '2.0'
+stages:
+  import_data:
+    cmd: python src/import.py --url //FLICKAT1-WL1/dvc_source_data_test/
+    params:
+      params.yaml:
+        import_data:
+          url: //FLICKAT1-WL1/dvc_source_data_test/
+    outs:
+    - path: data/raw_data
+      hash: md5
+      md5: 20fcc7682883542b7d5fbbab2259cc13.dir
+      size: 18950646
+      nfiles: 8
+  preprocess_data:
+    cmd: python src/preprocess.py
+    deps:
+    - path: data/raw_data
+      hash: md5
+      md5: 20fcc7682883542b7d5fbbab2259cc13.dir
+      size: 18950646
+      nfiles: 8
+    - path: src/preprocess.py
+      hash: md5
+      md5: 4a212d3459e05d4e34e4ae95f5f111b4
+      size: 1573
+    outs:
+    - path: data/output/combined.txt
+      hash: md5
+      md5: 85837b029e962231e8e1980e9909e552
+      size: 454113
+  database_store:
+    cmd: python src/populate_db.py
+    deps:
+    - path: data/output/combined.txt
+      hash: md5
+      md5: 85837b029e962231e8e1980e9909e552
+      size: 454113
+    - path: src/populate_db.py
+      hash: md5
+      md5: 323351d2f6cbb42d6f5977238a7dfbb4
+      size: 1517
+    outs:
+    - path: data/database/fantasy.db
+      hash: md5
+      md5: 058e88832bee150b53a7002b12632af7
+      size: 487424
+  linear_regression:
+    cmd: python src/model.py --linear --output Linear
+    deps:
+    - path: data/output/
+      hash: md5
+      md5: f6eeae9e3822f4398496f1ebf690d105.dir
+      size: 454113
+      nfiles: 1
+    - path: src/model.py
+      hash: md5
+      md5: c615412bde96bd9459ac495853e6c318
+      size: 5149
+    params:
+      params.yaml:
+        linear_model:
+          name: Linear
+    outs:
+    - path: data/model_output/Linear.json
+      hash: md5
+      md5: 76d7ed8e5e568e53df05f2e28dfc5fa9
+      size: 14
+    - path: data/model_output/Linear.pkl
+      hash: md5
+      md5: f7d31794c1866a559e49c9abc2478ad9
+      size: 5382
+  ridge_regression:
+    cmd: python src/model.py --ridge --output Ridge --ridge-alpha 0.001 0.01 0.1 1.0
+      10.0 100.0 1000.0 --ridge-solver auto
+    deps:
+    - path: data/output/
+      hash: md5
+      md5: f6eeae9e3822f4398496f1ebf690d105.dir
+      size: 454113
+      nfiles: 1
+    - path: src/model.py
+      hash: md5
+      md5: c615412bde96bd9459ac495853e6c318
+      size: 5149
+    params:
+      params.yaml:
+        ridge_model:
+          name: Ridge
+          alpha: 0.001 0.01 0.1 1.0 10.0 100.0 1000.0
+          solver: auto
+    outs:
+    - path: data/model_output/Ridge.json
+      hash: md5
+      md5: 5a80432b104e8b3da5f1b767d9fea2da
+      size: 65
+    - path: data/model_output/Ridge.pkl
+      hash: md5
+      md5: 0578d200d367a726058472add6dbb61b
+      size: 5457
+  lasso_regression:
+    cmd: python src/model.py --lasso --output Lasso --lasso-alpha 0.1 1.0
+    deps:
+    - path: data/output/
+      hash: md5
+      md5: f6eeae9e3822f4398496f1ebf690d105.dir
+      size: 454113
+      nfiles: 1
+    - path: src/model.py
+      hash: md5
+      md5: c615412bde96bd9459ac495853e6c318
+      size: 5149
+    params:
+      params.yaml:
+        lasso_model:
+          name: Lasso
+          alpha: 0.1 1.0
+    outs:
+    - path: data/model_output/Lasso.json
+      hash: md5
+      md5: 56c96bb6da4d2db4b2b57c8f6234c00e
+      size: 36
+    - path: data/model_output/Lasso.pkl
+      hash: md5
+      md5: b624df4e8673f4a8f6b68f216be302e4
+      size: 5557
+  random_forest:
+    cmd: python src/model.py --random-forest --output RandomForest --rf-estimators
+      10 50 --rf-max-depth 10 20
+    deps:
+    - path: data/output/
+      hash: md5
+      md5: f6eeae9e3822f4398496f1ebf690d105.dir
+      size: 454113
+      nfiles: 1
+    - path: src/model.py
+      hash: md5
+      md5: c615412bde96bd9459ac495853e6c318
+      size: 5149
+    params:
+      params.yaml:
+        random_forest_model:
+          name: RandomForest
+          n_estimators: 10 50
+          max_depth: 10 20
+    outs:
+    - path: data/model_output/RandomForest.json
+      hash: md5
+      md5: f07f853a8b76269cc950c59539fffce9
+      size: 77
+    - path: data/model_output/RandomForest.pkl
+      hash: md5
+      md5: f3ce5b70f8ac0cf098cb960f311d985d
+      size: 12037959
