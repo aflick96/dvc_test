@@ -1,9 +1,26 @@
 stages:
+  import_data:
+    cmd: python src/import.py --url ${import_data.url}
+    outs:
+    - data/raw_data
+    params:
+    - import_data
+
   preprocess_data:
     cmd: python src/preprocess.py
     deps:
     - data/raw_data
     - src/preprocess.py
+    outs:
+    - data/output/combined.txt
+
+  database_store:
+    cmd: python src/populate_db.py
+    deps:
+    - data/output/combined.txt
+    - src/populate_db.py
+    outs:
+    - data/database/fantasy.db
 
   linear_regression:
     cmd: python src/model.py --linear --output ${linear_model.name}

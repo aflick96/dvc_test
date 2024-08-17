@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import argparse
 import json
+import sqlite3
 
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LinearRegression, Ridge, Lasso
@@ -13,17 +14,25 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import joblib
 
-def read_data(file):
+def read_data():
     current_directory = os.path.dirname(__file__)
-    output_directory = os.path.join(current_directory, '../data/output')
-    file = os.path.join(output_directory, file)
-    return pd.read_csv(file)
+    output_directory = os.path.join(current_directory, '../data/database/fantasy.db')
+
+    conn = sqlite3.connect(output_directory)
+
+    # Read data from the database
+    try:
+        df = pd.read_sql_query('SELECT * FROM fantasy_data', conn)
+    finally:
+        conn.close()
+
+    return df
 
 def prepare_data(df):
     x = df.drop(columns=['Points', 'Name'])
     y = df['Points']
 
-    numerical_features = ['Cost', 'Season Cost Change', 'Start Cost', 'Points Per Game', 'Minutes Played', 'Goals Scored', 'Goals Conceded', 'Assists', 'Clean Sheets', 'Saves', 'Penalties Saved', 'Yellow Cards', 'Red Cards']
+    numerical_features = ['Cost', 'Season_Cost_Change', 'Start_Cost', 'Points_Per_Game', 'Minutes_Played', 'Goals_Scored', 'Goals_Conceded', 'Assists', 'Clean_Sheets', 'Saves', 'Penalties_Saved', 'Yellow_Cards', 'Red_Cards']
     categorical_features = ['Season', 'Team', 'Position']
  
     preprocessor = ColumnTransformer(
@@ -103,7 +112,7 @@ if __name__ == '__main__':
 
     model_configs = parse_model_configs(args)
 
-    data_set = read_data('combined.csv')
+    data_set = read_data()
     x, y, preprocessor = prepare_data(data_set)
 
     results = compare_models(x, y, preprocessor, model_configs)
